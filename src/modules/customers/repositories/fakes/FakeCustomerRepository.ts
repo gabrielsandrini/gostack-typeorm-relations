@@ -1,4 +1,4 @@
-import { uuid } from 'uuidv4';
+import { v4 as uuid } from 'uuid';
 import ICustomersRepository from '../ICustomersRepository';
 import ICreateCustomerDTO from '../../dtos/ICreateCustomerDTO';
 import Customer from '../../infra/typeorm/entities/Customer';
