@@ -2,6 +2,7 @@ import ICustomersRepository from '@modules/customers/repositories/ICustomersRepo
 import IProductsRepository from '@modules/products/repositories/IProductsRepository';
 import AppError from '@shared/errors/AppError';
 import { injectable, inject } from 'tsyringe';
+import Product from '@modules/products/infra/typeorm/entities/Product';
 import Order from '../infra/typeorm/entities/Order';
 import IOrdersRepository from '../repositories/IOrdersRepository';
 
@@ -49,25 +50,36 @@ class CreateOrderService {
       throw new AppError('One of the products does not exist');
     }
 
-    const parsedProductsToCreateOrder = products.map(receivedProd => {
-      const matchedProd = productsFound.find(p => p.id === receivedProd.id);
+    const parsedProductsToUpdateQuantity = products.map(receivedProduct => {
+      const foundProduct = productsFound.find(
+        p => p.id === receivedProduct.id,
+      ) as Product;
 
-      if (!matchedProd) {
-        throw new Error();
-      }
-
-      if (receivedProd.quantity > matchedProd.quantity) {
-        throw new AppError(`Out of stock for ${matchedProd.name}`);
+      if (receivedProduct.quantity > foundProduct.quantity) {
+        throw new AppError(`Out of stock for ${foundProduct.name}`);
       }
 
       return {
-        product_id: receivedProd.id,
-        quantity: receivedProd.quantity,
-        price: matchedProd.price,
+        id: receivedProduct.id,
+        quantity: foundProduct.quantity - receivedProduct.quantity,
       };
     });
 
-    await this.productsRepository.updateQuantity(products);
+    const parsedProductsToCreateOrder = products.map(receivedProduct => {
+      const foundProduct = productsFound.find(
+        p => p.id === receivedProduct.id,
+      ) as Product;
+
+      return {
+        product_id: receivedProduct.id,
+        quantity: receivedProduct.quantity,
+        price: foundProduct.price,
+      };
+    });
+
+    await this.productsRepository.updateQuantity(
+      parsedProductsToUpdateQuantity,
+    );
 
     const order = await this.ordersRepository.create({
       products: parsedProductsToCreateOrder,
